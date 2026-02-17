@@ -42,14 +42,14 @@ nMat = R.X_train_raw_clean.shape[1] - 7  # number of material dummy vars
 # ==========================================
 st.title("ANN Model Prediction")
 
-P = st.number_input("1. Point Load P [kN]", value=100.0)
-theta = st.number_input("2. Diagonal Angle θ [°]", value=45.0)
-material = st.selectbox("3. Material Type m", options=[1,2,3,4], index=0)
-A = st.number_input("4. Total Cross-Sectional Area A [mm²]", value=5000.0)
-a = st.number_input("5. Vertical Bar Area a [mm²]", value=100.0)
-V = st.number_input("6. Volume V [mm³]", value=100000.0)
-D_c = st.number_input("7. Diagonal Bar Diameter D_c [mm]", value=10.0)
-D_d = st.number_input("8. Vertical Bar Diameter D_d [mm]", value=12.0)
+P = st.number_input("1. Point Load P [kN]", value=0.61)
+theta = st.number_input("2. Diagonal Angle θ [°]", value=75)
+material = st.selectbox("3. Material Type m", options=[1,2,3,4], index=2)
+A = st.number_input("4. Total Cross-Sectional Area A [mm²]", value=5971.271)
+a = st.number_input("5. Vertical Bar Area a [mm²]", value=0.1583)
+V = st.number_input("6. Volume V [mm³]", value=594595.288)
+D_c = st.number_input("7. Diagonal Bar Diameter D_c [mm]", value=0.8)
+D_d = st.number_input("8. Vertical Bar Diameter D_d [mm]", value=0.9)
 
 if st.button("Predict"):
     # Log-transform
@@ -85,6 +85,6 @@ if st.button("Predict"):
     elif best_transform == 4:
         Y_real[1] = Y_t[1]**3
 
-    st.success("✅ Prediction Complete")
+    st.success("Prediction Complete")
     st.write(f"nu = {Y_real[0]:.6f}")
     st.write(f"E  = {Y_real[1]:.3f}")
