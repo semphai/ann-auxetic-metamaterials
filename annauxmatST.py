@@ -87,7 +87,7 @@ if st.button("Predict"):
 
     st.success("Prediction Complete")
     st.write(f"Poisson’s Ratio = {Y_real[0]:.6f}")
-    st.write(f"Elasticity Modulus = {Y_real[1]:.3f}")
+    st.write(r"**Elastic Modulus:** $E$ = {:.3f} N$\cdot$mm$^{{-2}}$".format(Y_real[1]))
     
     
     # ==========================
