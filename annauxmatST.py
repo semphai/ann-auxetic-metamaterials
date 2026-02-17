@@ -40,7 +40,7 @@ nMat = R.X_train_raw_clean.shape[1] - 7  # number of material dummy vars
 # ==========================================
 # STREAMLIT USER INTERFACE
 # ==========================================
-st.title("ANN Model Prediction")
+st.title("A Neural Network Surrogate Model for 3D Re-entrant Auxetic Metamaterials")
 
 P = st.number_input("1. Point Load P [kN]", value=0.61)
 theta = st.number_input("2. Diagonal Angle θ [°]", value=75)
