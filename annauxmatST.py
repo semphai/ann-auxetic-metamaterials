@@ -42,14 +42,14 @@ nMat = R.X_train_raw_clean.shape[1] - 7  # number of material dummy vars
 # ==========================================
 st.title("A Neural Network Surrogate Model for 3D Re-entrant Auxetic Metamaterials")
 
-P = st.number_input("1. Point Load P [kN]", value=0.61)
-theta = st.number_input("2. Diagonal Angle θ [°]", value=75)
-material = st.selectbox("3. Material Type m", options=[1,2,3,4], index=1)
-A = st.number_input("4. Total Cross-Sectional Area A [mm²]", value=5971.271)
-a = st.number_input("5. Vertical Bar Area a [mm²]", value=0.1583)
-V = st.number_input("6. Volume V [mm³]", value=594595.288)
-D_c = st.number_input("7. Diagonal Bar Diameter D_c [mm]", value=0.8)
-D_d = st.number_input("8. Vertical Bar Diameter D_d [mm]", value=0.9)
+P = st.number_input("1. Point Load P [kN]", value=1.22)
+theta = st.number_input("2. Diagonal Angle θ [°]", value=33)
+material = st.selectbox("3. Material Type m", options=[1,2,3,4], index=4)
+A = st.number_input("4. Total Cross-Sectional Area A [mm²]", value=161.29)
+a = st.number_input("5. Vertical Bar Area a [mm²]", value=0.1395)
+V = st.number_input("6. Volume V [mm³]", value=3658.0572)
+D_c = st.number_input("7. Diagonal Bar Diameter D_c [mm]", value=0.9)
+D_d = st.number_input("8. Vertical Bar Diameter D_d [mm]", value=0.8)
 
 if st.button("Predict"):
     # Log-transform
