@@ -44,7 +44,7 @@ st.title("ANN Model Prediction")
 
 P = st.number_input("1. Point Load P [kN]", value=0.61)
 theta = st.number_input("2. Diagonal Angle θ [°]", value=75)
-material = st.selectbox("3. Material Type m", options=[1,2,3,4], index=2)
+material = st.selectbox("3. Material Type m", options=[1,2,3,4], index=1)
 A = st.number_input("4. Total Cross-Sectional Area A [mm²]", value=5971.271)
 a = st.number_input("5. Vertical Bar Area a [mm²]", value=0.1583)
 V = st.number_input("6. Volume V [mm³]", value=594595.288)
@@ -86,5 +86,24 @@ if st.button("Predict"):
         Y_real[1] = Y_t[1]**3
 
     st.success("Prediction Complete")
-    st.write(f"nu = {Y_real[0]:.6f}")
-    st.write(f"E  = {Y_real[1]:.3f}")
+    st.write(f"Poisson’s Ratio($\nu$) = {Y_real[0]:.6f}")
+    st.write(f"Elasticity Modulus (E)  = {Y_real[1]:.3f}")
+    
+    
+    # ==========================
+# DISPLAY FOOTER / NOTE
+# ==========================
+st.markdown("""
+---
+**Note:**  
+This code performs predictions using the best model from the study titled "A Neural Network Surrogate Model for 3D Re-entrant Auxetic Metamaterials".  
+The study was conducted at Atatürk University, and the authors are:  
+- Mehmet Özyazıcıoğlu¹  
+- Bilal Usanmaz¹  
+- Ayşe Gül¹  
+- Süleyman N. Orhan²  
+
+¹ Faculty of Engineering, Atatürk University, Türkiye  
+² Faculty of Engineering, Erzurum Technical University, Türkiye
+""")
+
