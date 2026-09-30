@@ -82,7 +82,7 @@ with col_main1:
     st.write(f"- **Diagonal Bar Diameter ($D_c$):** {Dc} mm")
     st.write(f"- **Vertical Bar Diameter ($D_d$):** {Dd} mm")
     st.write(f"- **Diagonal Angle ($\theta$):** {theta}°")
-    st.write(f"- **Parent Material Modulus ($E_{mat}$):** {E_mat_raw:,.1f} MPa")
+    st.write(f"- **Parent Material Modulus ($E_{{mat}}$):** {E_mat_raw:,.1f} MPa")
 
 with col_main2:
     st.subheader("Prediction Results")
