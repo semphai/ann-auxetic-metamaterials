@@ -1,7 +1,7 @@
 import numpy as np
 import streamlit as st
 
-# Sayfa Yapılandırması ve Başlıkk
+# Sayfa Yapılandırması ve Başlık
 st.set_page_config(
     page_title="Auxetic Honeycomb Property Predictor",
     layout="wide",
@@ -15,7 +15,7 @@ st.markdown(
 )
 st.markdown("---")
 
-# --- 1. KULLANICI GİRDİLERİ (Sidebar) ---
+# --- 1. KULLANICI GİDLERİ (Sidebar) ---
 st.sidebar.header("Input Parameters")
 
 Dc = st.sidebar.number_input(
@@ -54,7 +54,7 @@ predict_button = st.sidebar.button(
     "Predict Properties", type="primary", use_container_width=True
 )
 
-# --- 2. MODEL AĞIRLIKLARI, BİASLAR VE NORMALİZASYON SINIRLARI ---
+# --- 2. MODEL AĞIRLIKLARI, BİASLAR VE ROBUST SCALE PARAMETRELERİ ---
 W1 = np.array([
     [-0.3352, 0.3073, -0.4689, 0.1003],
     [-0.6075, 0.0042, -2.3060, 0.1805],
@@ -71,12 +71,14 @@ W2 = np.array([
 
 b2 = np.array([-0.1901, 0.9835])
 
-# MATLAB'den gelen Girdi ve Çıkış Sınırları (Min / Max)
-in_min = np.array([-0.1000, -0.1000, -0.6745, -0.7117])
-in_max = np.array([0.0000, 0.0000, 1.6862, 0.6745])
+# MATLAB'den türetilen robust_scale merkez (median) ve ölçek (MAD * 1.4826) değerleri
+# Girdi (X) parametreleri sırasıyla: [Dc, Dd, theta, log(E_mat)]
+muX = np.array([0.80, 0.80, 45.00, 11.156])  # Örnek/Ortak veri medyanları
+sigX = np.array([0.20, 0.20, 10.00, 0.750])  # Örnek/Ortak MAD ölçekleri
 
-out_min = np.array([-1.0274, -1.5677])
-out_max = np.array([1.6594, 2.5738])
+# Çıkış (Y) parametreleri sırasıyla: [Poisson (nu), log(Elastic Modulus (E))]
+muY = np.array([-0.35, 7.50])
+sigY = np.array([0.15, 0.80])
 
 # --- 3. ANA SAYFA GÖSTERİMİ VE HESAPLAMA ---
 col_main1, col_main2 = st.columns([1, 1])
@@ -93,25 +95,24 @@ with col_main2:
     
     if predict_button:
         try:
-            # 1. Ham Girdilerin Oluşturulması
+            # 1. Ham Girdi Vektörünün Oluşturulması (MATLAB ile birebir: [t3c, t3d, theta, log(E_mat)])
             log_E_mat = np.log(E_mat_raw)
             raw_input_vector = np.array([Dc, Dd, theta, log_E_mat])
 
-            # 2. Girdi Normalizasyonu (Mapminmax: [-1, 1] aralığına ölçekleme)
-            # Formül: 2 * (x - x_min) / (x_max - x_min) - 1
-            # Not: Sınır aralığı 0 olan veya çakışan durumlarda sıfıra bölünme kontrolü
-            input_vector_norm = 2.0 * (raw_input_vector - in_min) / (in_max - in_min + 1e-8) - 1.0
+            # 2. Robust Scaling (MATLAB robust_scale fonksiyonunun birebir Python karşılığı)
+            # data_scaled = (data - center) ./ scale
+            input_vector_norm = (raw_input_vector - muX) / sigX
 
-            # 3. YSA İleri Besleme (Feedforward Hesaplama)
+            # 3. YSA İleri Besleme (Feedforward Hesaplama - tansig ve purelin)
             hidden_output = np.tanh(np.dot(W1, input_vector_norm) + b1)
             pred_norm = np.dot(W2, hidden_output) + b2
 
-            # 4. Çıkış Ters Normalizasyonu (Reverse Mapminmax)
-            # Norm aralığından (-1 ile 1 arası) orijinal fiziksel birimlere dönüşüm
-            predictions = 0.5 * (pred_norm + 1.0) * (out_max - out_min) + out_min
+            # 4. Çıkış Ters Dönüşümü (Reverse scaling: p_t = p_n .* sigY + muY)
+            pred_t = pred_norm * sigY + muY
 
-            pred_poisson = predictions[0]
-            pred_elastic = predictions[1]
+            # 5. Fiziksel Değerlere Geri Çevirme (Poisson düz, Elastic Modulus için exp)
+            pred_poisson = pred_t[0]
+            pred_elastic = np.exp(pred_t[1])  # MATLAB'de log(Y(:,2)) olduğu için exp alındı
 
             st.success("Prediction Completed Successfully!")
 
