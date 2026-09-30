@@ -12,87 +12,86 @@ st.write(
     "using the representative Bayesian Regularized ANN model (Seed 123, Fold 1)."
 )
 
-# --- 1. KULLANICI GİRDİLERİ (MATLAB Sıralamasına Tam Uyumlu) ---
-st.header("Input Parameters")
+try:
+    # --- 1. KULLANICI GİRDİLERİ ---
+    st.header("Input Parameters")
 
-Dc = st.number_input(
-    "Diagonal Bar Diameter (Dc, mm)",
-    min_value=0.5,
-    max_value=2.0,
-    value=0.8,
-    step=0.1,
-)
-Dd = st.number_input(
-    "Vertical Bar Diameter (Dd, mm)",
-    min_value=0.5,
-    max_value=2.0,
-    value=0.8,
-    step=0.1,
-)
-theta = st.slider(
-    "Diagonal Angle (θ, degrees)",
-    min_value=30.0,
-    max_value=80.0,
-    value=45.0,
-    step=1.0,
-)
-E_mat_raw = st.number_input(
-    "Parent Material Elastic Modulus (E_mat, MPa)",
-    min_value=1000.0,
-    max_value=300000.0,
-    value=70000.0,
-    step=1000.0,
-)
+    Dc = st.number_input(
+        "Diagonal Bar Diameter (Dc, mm)",
+        min_value=0.5,
+        max_value=2.0,
+        value=0.8,
+        step=0.1,
+    )
+    Dd = st.number_input(
+        "Vertical Bar Diameter (Dd, mm)",
+        min_value=0.5,
+        max_value=2.0,
+        value=0.8,
+        step=0.1,
+    )
+    theta = st.slider(
+        "Diagonal Angle (θ, degrees)",
+        min_value=30.0,
+        max_value=80.0,
+        value=45.0,
+        step=1.0,
+    )
+    E_mat_raw = st.number_input(
+        "Parent Material Elastic Modulus (E_mat, MPa)",
+        min_value=1000.0,
+        max_value=300000.0,
+        value=70000.0,
+        step=1000.0,
+    )
 
-# --- 2. ARKA PLAN DÖNÜŞÜMÜ ---
-# Kullanıcı gerçek E_mat değerini girer, arka planda logaritmik dönüşüm uygulanır
-log_E_mat = np.log(E_mat_raw)
+    # --- 2. ARKA PLAN DÖNÜŞÜMÜ ---
+    log_E_mat = np.log(E_mat_raw)
 
-# --- 3. REPRESENTATIVE MODEL AĞIRLIKLARI VE BİASLARI (Seed 123, Fold 1) ---
-W1 = np.array([
-    [-0.3352, 0.3073, -0.4689, 0.1003],
-    [-0.6075, 0.0042, -2.3060, 0.1805],
-    [-4.0915, -6.0534, -4.8353, 0.7314],
-    [-1.8252, 1.2540, 1.7344, -0.1570],
-])  # 4x4 Matris
+    # --- 3. MODEL AĞIRLIKLARI VE BİASLARI ---
+    W1 = np.array([
+        [-0.3352, 0.3073, -0.4689, 0.1003],
+        [-0.6075, 0.0042, -2.3060, 0.1805],
+        [-4.0915, -6.0534, -4.8353, 0.7314],
+        [-1.8252, 1.2540, 1.7344, -0.1570],
+    ])
 
-b1 = np.array([0.2005, 0.0972, -2.2471, 0.5844])  # 4x1 Vektör
+    b1 = np.array([0.2005, 0.0972, -2.2471, 0.5844])
 
-W2 = np.array([
-    [-1.9238, 1.3427, -3.4984, -2.8834],
-    [2.1866, -1.8956, 0.4871, -1.8641],
-])  # 2x4 Matris
+    W2 = np.array([
+        [-1.9238, 1.3427, -3.4984, -2.8834],
+        [2.1866, -1.8956, 0.4871, -1.8641],
+    ])
 
-b2 = np.array([-0.1901, 0.9835])  # 2x1 Vektör
+    b2 = np.array([-0.1901, 0.9835])
 
-# --- 4. GİRDİ VEKTÖRÜNÜN OLUŞTURULMASI ---
-# Sıralama: [Dc, Dd, Theta, log(E_mat)]
-input_vector = np.array([Dc, Dd, theta, log_E_mat])
+    # --- 4. GİRDİ VEKTÖRÜ ---
+    input_vector = np.array([Dc, Dd, theta, log_E_mat])
 
-# --- 5. TAHMİN VE İLERİ BESLEME (FORWARD PROPAGATION) ---
-if st.button("Predict Properties", type="primary"):
-    # Gizli Katman (Hidden Layer) - Tanh aktivasyonu
-    hidden_output = np.tanh(np.dot(W1, input_vector) + b1)
+    # --- 5. TAHMİN ---
+    if st.button("Predict Properties", type="primary"):
+        hidden_output = np.tanh(np.dot(W1, input_vector) + b1)
+        predictions = np.dot(W2, hidden_output) + b2
 
-    # Çıktı Katmanı (Output Layer) - Lineer aktivasyon
-    predictions = np.dot(W2, hidden_output) + b2
+        pred_poisson = predictions[0]
+        pred_elastic = predictions[1]
 
-    pred_poisson = predictions[0]
-    pred_elastic = predictions[1]
+        st.success("Prediction Completed Successfully!")
 
-    # --- 6. SONUÇLARIN EKRANA YANSıtILMASI ---
-    st.success("Prediction Completed Successfully!")
+        col1, col2 = st.columns(2)
+        with col1:
+            st.metric(
+                label="Predicted Poisson's Ratio (ν)",
+                value=f"{pred_poisson:.4f}",
+            )
+        with col2:
+            st.metric(
+                label="Predicted Elastic Modulus (E)",
+                value=f"{pred_elastic:.2f} MPa",
+            )
 
-    col1, col2 = st.columns(2)
-    with col1:
-        st.metric(
-            label="Predicted Poisson's Ratio (ν)", value=f"{pred_poisson:.4f}"
-        )
-    with col2:
-        st.metric(
-            label="Predicted Elastic Modulus (E)",
-            value=f"{pred_elastic:.2f} MPa",
-        )
+except Exception as e:
+    st.error(f"An error occurred during execution: {e}")
 # ==========================
 # DISPLAY FOOTER / NOTE
 # ==========================
