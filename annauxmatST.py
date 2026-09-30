@@ -1,7 +1,7 @@
 import numpy as np
 import streamlit as st
 
-# Sayfa Yapılandırması ve Başlık
+# Sayfa Yapılandırması ve Başlıkk
 st.set_page_config(
     page_title="Auxetic Honeycomb Property Predictor",
     layout="wide",
