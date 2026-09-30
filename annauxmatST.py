@@ -50,14 +50,11 @@ E_mat_raw = st.sidebar.number_input(
     format="%.1f",
 )
 
-# Predict Butonu Sidebar'a taşındı
 predict_button = st.sidebar.button(
     "Predict Properties", type="primary", use_container_width=True
 )
 
-# --- 2. MODEL AĞIRLIKLARI VE BİASLARI ---
-# Not: Eğer modelinizi eğitirken input/output normalizasyonu (mapstd/mapminmax) 
-# kullandıysanız, buraya ilgili ortalama/standart sapma değerlerini eklemeniz gerekebilir.
+# --- 2. MODEL AĞIRLIKLARI, BİASLAR VE NORMALİZASYON SINIRLARI ---
 W1 = np.array([
     [-0.3352, 0.3073, -0.4689, 0.1003],
     [-0.6075, 0.0042, -2.3060, 0.1805],
@@ -74,6 +71,13 @@ W2 = np.array([
 
 b2 = np.array([-0.1901, 0.9835])
 
+# MATLAB'den gelen Girdi ve Çıkış Sınırları (Min / Max)
+in_min = np.array([-0.1000, -0.1000, -0.6745, -0.7117])
+in_max = np.array([0.0000, 0.0000, 1.6862, 0.6745])
+
+out_min = np.array([-1.0274, -1.5677])
+out_max = np.array([1.6594, 2.5738])
+
 # --- 3. ANA SAYFA GÖSTERİMİ VE HESAPLAMA ---
 col_main1, col_main2 = st.columns([1, 1])
 
@@ -89,13 +93,22 @@ with col_main2:
     
     if predict_button:
         try:
-            # Arka plan dönüşümü
+            # 1. Ham Girdilerin Oluşturulması
             log_E_mat = np.log(E_mat_raw)
-            input_vector = np.array([Dc, Dd, theta, log_E_mat])
+            raw_input_vector = np.array([Dc, Dd, theta, log_E_mat])
 
-            # İleri besleme (Feedforward hesaplama)
-            hidden_output = np.tanh(np.dot(W1, input_vector) + b1)
-            predictions = np.dot(W2, hidden_output) + b2
+            # 2. Girdi Normalizasyonu (Mapminmax: [-1, 1] aralığına ölçekleme)
+            # Formül: 2 * (x - x_min) / (x_max - x_min) - 1
+            # Not: Sınır aralığı 0 olan veya çakışan durumlarda sıfıra bölünme kontrolü
+            input_vector_norm = 2.0 * (raw_input_vector - in_min) / (in_max - in_min + 1e-8) - 1.0
+
+            # 3. YSA İleri Besleme (Feedforward Hesaplama)
+            hidden_output = np.tanh(np.dot(W1, input_vector_norm) + b1)
+            pred_norm = np.dot(W2, hidden_output) + b2
+
+            # 4. Çıkış Ters Normalizasyonu (Reverse Mapminmax)
+            # Norm aralığından (-1 ile 1 arası) orijinal fiziksel birimlere dönüşüm
+            predictions = 0.5 * (pred_norm + 1.0) * (out_max - out_min) + out_min
 
             pred_poisson = predictions[0]
             pred_elastic = predictions[1]
@@ -127,6 +140,6 @@ st.markdown("""
 **Note:**  
 This application performs predictions using the surrogate model from the study titled *"A Neural Network Surrogate Model for 3D Re-entrant Auxetic Metamaterials"*.  
 **Research Institutions:**  
-- ¹ Faculty of Engineering, Atatürk University, Türkiye  
-- ² Faculty of Engineering, Erzurum Technical University, Türkiye  
+- ¹ Faculty of Engineering, Atatürk University, Türkiye[cite: 1]  
+- ² Faculty of Engineering, Erzurum Technical University, Türkiye[cite: 1]  
 """)
