@@ -1,96 +1,99 @@
-import streamlit as st
 import numpy as np
-from scipy.io import loadmat
+import streamlit as st
 
-# ==========================================
-# LOAD MODEL
-# ==========================================
-data = loadmat("R_seed123.mat", struct_as_record=False, squeeze_me=True)
-R = data["RR"]
+# Sayfa Yapılandırması ve Başlık
+st.set_page_config(
+    page_title="Auxetic Honeycomb Property Predictor", layout="centered"
+)
 
-# ==========================================
-# NETWORK WEIGHTS & BIAS
-# ==========================================
-for w in R.net.IW:
-    if w.size > 0:
-        IW = np.array(w)
-        break
+st.title("3D Re-entrant Auxetic Honeycomb Surrogate Model")
+st.write(
+    "Predict the homogenized Poisson's ratio (ν) and Elastic Modulus (E) "
+    "using the representative Bayesian Regularized ANN model (Seed 123, Fold 1)."
+)
 
-for w in R.net.LW.flatten():
-    if w.size > 0:
-        LW = np.array(w)
-        break
+# --- 1. KULLANICI GİRDİLERİ (MATLAB Sıralamasına Tam Uyumlu) ---
+st.header("Input Parameters")
 
-b1 = np.array(R.net.b[0]).reshape(-1)
-b2 = np.array(R.net.b[1]).reshape(-1)
+Dc = st.number_input(
+    "Diagonal Bar Diameter (Dc, mm)",
+    min_value=0.5,
+    max_value=2.0,
+    value=0.8,
+    step=0.1,
+)
+Dd = st.number_input(
+    "Vertical Bar Diameter (Dd, mm)",
+    min_value=0.5,
+    max_value=2.0,
+    value=0.8,
+    step=0.1,
+)
+theta = st.slider(
+    "Diagonal Angle (θ, degrees)",
+    min_value=30.0,
+    max_value=80.0,
+    value=45.0,
+    step=1.0,
+)
+E_mat_raw = st.number_input(
+    "Parent Material Elastic Modulus (E_mat, MPa)",
+    min_value=1000.0,
+    max_value=300000.0,
+    value=70000.0,
+    step=1000.0,
+)
 
-# ==========================================
-# OTHER PARAMETERS
-# ==========================================
-muX = np.array(R.muX)
-sigX = np.array(R.sigX)
+# --- 2. ARKA PLAN DÖNÜŞÜMÜ ---
+# Kullanıcı gerçek E_mat değerini girer, arka planda logaritmik dönüşüm uygulanır
+log_E_mat = np.log(E_mat_raw)
 
-muY = np.array(R.muY)
-sigY = np.array(R.sigY)
+# --- 3. REPRESENTATIVE MODEL AĞIRLIKLARI VE BİASLARI (Seed 123, Fold 1) ---
+W1 = np.array([
+    [-0.3352, 0.3073, -0.4689, 0.1003],
+    [-0.6075, 0.0042, -2.3060, 0.1805],
+    [-4.0915, -6.0534, -4.8353, 0.7314],
+    [-1.8252, 1.2540, 1.7344, -0.1570],
+])  # 4x4 Matris
 
-best_transform = int(R.best_transform)
+b1 = np.array([0.2005, 0.0972, -2.2471, 0.5844])  # 4x1 Vektör
 
-nMat = R.X_train_raw_clean.shape[1] - 7  # number of material dummy vars
+W2 = np.array([
+    [-1.9238, 1.3427, -3.4984, -2.8834],
+    [2.1866, -1.8956, 0.4871, -1.8641],
+])  # 2x4 Matris
 
-# ==========================================
-# STREAMLIT USER INTERFACE
-# ==========================================
-st.title("A Neural Network Surrogate Model for 3D Re-entrant Auxetic Metamaterials")
+b2 = np.array([-0.1901, 0.9835])  # 2x1 Vektör
 
-P = st.number_input("1. Point Load P [kN]", value=1.22)
-theta = st.number_input("2. Diagonal Angle θ [°]", value=33)
-material = st.selectbox("3. Material Type m", options=[1,2,3,4], index=3)
-A = st.number_input("4. Total Cross-Sectional Area A [mm²]", value=161.29)
-a = st.number_input("5. Vertical Bar Area a [mm²]", value=0.1395)
-V = st.number_input("6. Volume V [mm³]", value=3658.0572)
-D_c = st.number_input("7. Diagonal Bar Diameter D_c [mm]", value=0.9)
-D_d = st.number_input("8. Vertical Bar Diameter D_d [mm]", value=0.8)
+# --- 4. GİRDİ VEKTÖRÜNÜN OLUŞTURULMASI ---
+# Sıralama: [Dc, Dd, Theta, log(E_mat)]
+input_vector = np.array([Dc, Dd, theta, log_E_mat])
 
-if st.button("Predict"):
-    # Log-transform
-    i05 = np.log(A)
-    i07 = np.log(V)
+# --- 5. TAHMİN VE İLERİ BESLEME (FORWARD PROPAGATION) ---
+if st.button("Predict Properties", type="primary"):
+    # Gizli Katman (Hidden Layer) - Tanh aktivasyonu
+    hidden_output = np.tanh(np.dot(W1, input_vector) + b1)
 
-    # Material one-hot
-    mat_dummy = np.zeros(nMat)
-    mat_dummy[material-1] = 1
+    # Çıktı Katmanı (Output Layer) - Lineer aktivasyon
+    predictions = np.dot(W2, hidden_output) + b2
 
-    # Input vector
-    X_raw = np.concatenate(([D_c, D_d, a, P, theta, i05, i07], mat_dummy))
+    pred_poisson = predictions[0]
+    pred_elastic = predictions[1]
 
-    # Normalization
-    Xn = (X_raw - muX) / sigX
+    # --- 6. SONUÇLARIN EKRANA YANSıtILMASI ---
+    st.success("Prediction Completed Successfully!")
 
-    # Forward pass
-    def tansig(x):
-        return 2/(1+np.exp(-2*x)) - 1
-
-    z1 = IW @ Xn + b1
-    h = tansig(z1)
-    Y_n = LW @ h + b2
-
-    # Denormalization
-    Y_t = Y_n * sigY + muY
-    Y_real = Y_t.copy()
-
-    if best_transform == 2:
-        Y_real[1] = np.exp(Y_t[1])
-    elif best_transform == 3:
-        Y_real[1] = Y_t[1]**2
-    elif best_transform == 4:
-        Y_real[1] = Y_t[1]**3
-
-    st.success("Prediction Complete")
-    st.write(f"Poisson’s Ratio = {Y_real[0]:.6f}")
-    st.write(r"**Elastic Modulus:** $E$ = {:.3f} N$\cdot$mm$^{{-2}}$".format(Y_real[1]))
-    
-    
-    # ==========================
+    col1, col2 = st.columns(2)
+    with col1:
+        st.metric(
+            label="Predicted Poisson's Ratio (ν)", value=f"{pred_poisson:.4f}"
+        )
+    with col2:
+        st.metric(
+            label="Predicted Elastic Modulus (E)",
+            value=f"{pred_elastic:.2f} MPa",
+        )
+# ==========================
 # DISPLAY FOOTER / NOTE
 # ==========================
 st.markdown("""
